@@ -139,7 +139,7 @@ class Fluid {
 			this.v[(X - 1) * Y + j] = this.v[(X - 2) * Y + j];
 		}
 		for (let j = 1; j < Y - 1; j++) {
-			this.u[j + Y] = 1.4;
+			this.u[j + Y] = 1;
 			if (
 				Math.abs(j - C) < Y / 16 ||
 				(Math.floor((j - C - 8) / 4) % 4 == 0.0 && j > 8 && j < Y - 8)
@@ -421,7 +421,7 @@ function fluidText(fluid: Fluid) {
 
 	// D
 	fluid.solidifyRect(X, centerY - 20, 10, 40);
-	fluid.solidifyRect(X + 10, centerY - 20, 10, 10);
+	fluid.solidifyRect(X + 10, centerY - 20, 12, 10);
 	fluid.solidifyRect(X + 10, centerY + 10, 12, 10);
 	fluid.solidifyRect(X + 15, centerY - 18, 10, 36);
 	X += 15 + 10;
@@ -462,8 +462,8 @@ export function simulate(
 					continue;
 				}
 
-				fluid.v[fx * Y + fy] = dy;
-				fluid.u[fx * Y + fy] = dx;
+				fluid.v[fx * Y + fy] -= dy;
+				fluid.u[fx * Y + fy] += dx;
 			}
 		}
 	});
