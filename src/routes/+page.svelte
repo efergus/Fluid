@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { simulate } from '$lib/fluid.ts/fluid';
+	import { simulate } from '$lib/fluid/fluid';
 	import { onMount } from 'svelte';
 
 	let canvas: HTMLCanvasElement;
@@ -14,9 +14,12 @@
 		ctx.arc(20, 20, 10, 0, 2 * Math.PI);
 		ctx.fill();
 
-		const scale = 4;
-		const width = Math.floor(window.innerWidth / scale);
-		const height = Math.floor(window.innerHeight / scale);
+		const res = 150;
+		let width = window.innerWidth;
+		let height = window.innerHeight;
+		const scale = Math.floor(Math.min(width, height) / res);
+		width = Math.floor(width / scale);
+		height = Math.floor(height / scale);
 		const { loop } = simulate(ctx, width, height, scale);
 		loop(Infinity);
 		// loop();
