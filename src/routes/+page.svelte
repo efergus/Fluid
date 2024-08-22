@@ -14,9 +14,9 @@
 		ctx.arc(20, 20, 10, 0, 2 * Math.PI);
 		ctx.fill();
 
-		const res = 180;
+		const res = 260;
 		let width = window.innerWidth;
-		let height = window.innerHeight;
+		let height = Math.min(window.innerHeight, width);
 		const scale = Math.ceil(Math.min(width, height) / res);
 		width = Math.floor(width / scale);
 		height = Math.floor(height / scale);
@@ -33,5 +33,8 @@
 	div {
 		width: 100%;
 		height: 100%;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
 	}
 </style>

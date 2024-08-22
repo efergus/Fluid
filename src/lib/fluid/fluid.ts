@@ -342,7 +342,7 @@ function draw(ctx: CanvasRenderingContext2D, scale: number, fluid: Fluid) {
 
 function fluidText(fluid: Fluid) {
 	const centerY = Math.floor(fluid.numY / 2) + 1;
-	const start = Math.floor(fluid.numX / 5);
+	const start = Math.min(Math.floor(fluid.numX / 5), Math.max(fluid.numX - 170, 0));
 	let X = start;
 	// F
 	fluid.smokeRect(X, centerY - 20, 10, 40);
