@@ -271,10 +271,11 @@ class Fluid {
 	}
 }
 
-const colormap = new Array(255).fill(null).map((_, idx) => {
-	const color = new Color('oklch', [0.5, 0, 0]);
-	color.oklch.c = 0.4;
-	color.oklch.h = Math.floor(294 - (idx * 300) / 255);
+const colormap = new Array(256).fill(null).map((_, idx) => {
+	const amt = idx / 255;
+	const color = new Color('oklch', [0.4 + amt * 0.2, 0, 0]);
+	color.oklch.c = 0.2;
+	color.oklch.h = Math.floor(294 - amt * 300);
 	const rgb = [...color.srgb.map((x) => clamp(x * 255, 0, 255)), 255];
 	return rgb;
 });
