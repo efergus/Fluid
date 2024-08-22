@@ -344,13 +344,13 @@ function fluidText(fluid: Fluid) {
 	const start = Math.floor(fluid.numX / 5);
 	let X = start;
 	// F
-	fluid.solidifyRect(X, centerY - 20, 10, 40);
-	fluid.solidifyRect(X + 10, centerY + 10, 12, 10);
-	fluid.solidifyRect(X + 10, centerY - 5, 8, 8);
+	fluid.smokeRect(X, centerY - 20, 10, 40);
+	fluid.smokeRect(X + 10, centerY + 10, 12, 10);
+	fluid.smokeRect(X + 10, centerY - 5, 8, 8);
 	X += 22 + 10;
 	// L
-	fluid.solidifyRect(X, centerY - 20, 10, 40);
-	fluid.solidifyRect(X + 10, centerY - 20, 12, 10);
+	fluid.smokeRect(X, centerY - 20, 10, 40);
+	fluid.smokeRect(X + 10, centerY - 20, 12, 10);
 	X += 22 + 10;
 	// U
 	fluid.solidifyRect(X, centerY - 20, 10, 40);
@@ -358,14 +358,14 @@ function fluidText(fluid: Fluid) {
 	fluid.solidifyRect(X + 20, centerY - 20, 10, 40);
 	X += 30 + 10;
 	// I
-	fluid.solidifyRect(X, centerY - 20, 10, 40);
+	fluid.smokeRect(X, centerY - 20, 10, 40);
 	X += 10 + 10;
 
 	// D
-	fluid.solidifyRect(X, centerY - 20, 10, 40);
-	fluid.solidifyRect(X + 10, centerY - 20, 12, 10);
-	fluid.solidifyRect(X + 10, centerY + 10, 12, 10);
-	fluid.solidifyRect(X + 15, centerY - 18, 10, 36);
+	fluid.smokeRect(X, centerY - 20, 10, 40);
+	fluid.smokeRect(X + 10, centerY - 20, 12, 10);
+	fluid.smokeRect(X + 10, centerY + 10, 12, 10);
+	fluid.smokeRect(X + 15, centerY - 18, 10, 36);
 	X += 15 + 10;
 }
 
