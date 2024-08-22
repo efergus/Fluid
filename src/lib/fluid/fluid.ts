@@ -403,6 +403,8 @@ export function simulate(
 				}
 				fluid.s[idx] = 0.0;
 				fluid.smoke[idx] = 0.0;
+				fluid.u[idx] = 0.0;
+				fluid.v[idx] = 0.0;
 			}
 		}
 	};

@@ -96,9 +96,22 @@ class Fluid {
 	}
 }
 
-type DrawContext = {};
+type DrawContext = {
+	ctx: CanvasRenderingContext2D;
+	minP: number;
+	maxP: number;
+	fluid: Fluid;
+};
 
-function simulate(ctx: CanvasRenderingContext2D, width: number, height: number, scale = 4.0) {
+function draw(context: DrawContext) {}
+
+function simulate(
+	ctx: CanvasRenderingContext2D,
+	width: number,
+	height: number,
+	scale = 4.0,
+	steps = 40,
+) {
 	const fluid = new Fluid(width, height);
 	const X = width;
 	const Y = height;
@@ -107,4 +120,12 @@ function simulate(ctx: CanvasRenderingContext2D, width: number, height: number, 
 	ctx.canvas.height = Y * scale;
 	ctx.canvas.style.width = `${X * scale}px`;
 	ctx.canvas.style.height = `${Y * scale}px`;
+
+	const update = () => {
+		for (let i = 0; i < steps; i++) {
+			fluid.step(1 / 60 / steps);
+		}
+		// draw();
+		requestAnimationFrame(update);
+	};
 }
