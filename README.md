@@ -2,4 +2,4 @@
 
 Exploring fluid simulation algorithms
 
-![Fluid simulation](./static/FluidScreenshot.png)
+![Fluid simulation](./static/screenshot.png)
