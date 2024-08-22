@@ -1,3 +1,5 @@
+import Color from 'colorjs.io';
+
 function clamp(val: number, lower: number, higher: number) {
 	return Math.max(lower, Math.min(val, higher));
 }
@@ -88,23 +90,6 @@ class Fluid {
 					const dp = -(divergence / freedom) * this.overrelaxation;
 					this.p[idx] += cp * dp;
 					biggest = Math.max(Math.abs(this.p[idx]), biggest);
-					// if (!logged && i > 40 && j == 1) {
-					// 	logged += 1;
-					// 	console.log({
-					// 		divergence,
-					// 		freedom,
-					// 		idx,
-					// 		i,
-					// 		j,
-					// 		X,
-					// 		Y,
-					// 		dp,
-					// 		p: this.p[idx],
-					// 		cp,
-					// 		a: [this.u[idx], this.u[idx + 1], this.v[idx], this.v[idx + 1]],
-					// 		s: [sx0, sx1, sy0, sy1],
-					// 	});
-					// }
 
 					this.u[idx] -= sx0 * dp;
 					this.u[idx + Y] += sx1 * dp;
@@ -113,17 +98,6 @@ class Fluid {
 				}
 			}
 		}
-
-		// const amt = 1 - dt;
-		// for (let i = 1; i < X - 1; i++) {
-		// 	for (let j = 1; j < Y - 1; j++) {
-		// 		const idx = i * Y + j;
-		// 		if (Math.abs(this.p[idx]) > biggest * 0.8) {
-		// 			this.u[idx] *= amt;
-		// 			this.v[idx] *= amt;
-		// 		}
-		// 	}
-		// }
 	}
 
 	extrapolateEdges() {
@@ -139,7 +113,7 @@ class Fluid {
 			this.v[(X - 1) * Y + j] = this.v[(X - 2) * Y + j];
 		}
 		for (let j = 1; j < Y - 1; j++) {
-			this.u[j + Y] = 0.8;
+			this.u[j + Y] = 1.0;
 			if (
 				Math.abs(j - C) < Y / 16 ||
 				(Math.floor((j - C - 8) / 4) % 4 == 0.0 && j > 8 && j < Y - 8)
@@ -147,9 +121,6 @@ class Fluid {
 				this.smoke[j + Y] = 1.0;
 			}
 		}
-		// this.v[(X - 1) * Y + 8] = -10.0;
-		// this.u[Y * 2] = 0.1;
-		// this.u[Y * 3 + 3] = 0.1;
 	}
 
 	sample(x: number, y: number, field: Float32Array) {
@@ -266,8 +237,6 @@ class Fluid {
 					const y = j * h + h2 - dt * v;
 
 					let val = this.sample(x, y, this.smoke);
-					// const amt = dt * 0.1;
-					// val = val * (1 - amt) + Math.sqrt(val) * amt;
 					this.smoke2[idx] = val;
 				}
 			}
@@ -285,50 +254,37 @@ class Fluid {
 		this.advectSmoke(dt);
 	}
 
-	solidifyRect(x: number, y: number, w: number, h: number) {
+	setRect(x: number, y: number, w: number, h: number, field: Float32Array, val: number) {
 		for (let i = x; i < x + w; i++) {
 			for (let j = y; j < y + h; j++) {
-				this.s[i * this.numY + j] = 0.0;
+				field[i * this.numY + j] = val;
 			}
 		}
 	}
+
+	solidifyRect(x: number, y: number, w: number, h: number) {
+		this.setRect(x, y, w, h, this.s, 0.0);
+	}
+
+	smokeRect(x: number, y: number, w: number, h: number) {
+		this.setRect(x, y, w, h, this.smoke, 1.0);
+	}
 }
+
+const colormap = new Array(255).fill(null).map((_, idx) => {
+	const color = new Color('oklch', [0.5, 0, 0]);
+	color.oklch.c = 0.4;
+	color.oklch.h = Math.floor(294 - (idx * 300) / 255);
+	const rgb = [...color.srgb.map((x) => clamp(x * 255, 0, 255)), 255];
+	return rgb;
+});
 
 function getSciColor(val: number, minVal: number, maxVal: number) {
 	val = clamp(val, minVal, maxVal - 0.001);
 	let d = maxVal - minVal;
 	val = d == 0.0 ? 0.5 : (val - minVal) / d;
-	let m = 0.25;
-	let num = Math.floor(val / m);
-	let s = (val - num * m) / m;
-	let r, g, b;
 
-	switch (num) {
-		case 0:
-			r = 0.0;
-			g = s;
-			b = 1.0;
-			break;
-		case 1:
-			r = 0.0;
-			g = 1.0;
-			b = 1.0 - s;
-			break;
-		case 2:
-			r = s;
-			g = 1.0;
-			b = 0.0;
-			break;
-		case 3:
-			r = 1.0;
-			g = 1.0 - s;
-			b = 0.0;
-			break;
-		default:
-			return [0, 0, 0, 255];
-	}
-
-	return [255 * r, 255 * g, 255 * b, 255];
+	return colormap[Math.floor(val * 255)].slice();
 }
 
 function draw(ctx: CanvasRenderingContext2D, scale: number, fluid: Fluid) {
@@ -344,20 +300,15 @@ function draw(ctx: CanvasRenderingContext2D, scale: number, fluid: Fluid) {
 	let minV = 0;
 	let maxV = 0;
 	for (let i = 0; i < X * Y; i++) {
-		minP = Math.min(minP, fluid.p[i]);
-		maxP = Math.max(maxP, fluid.p[i]);
+		const p = fluid.p[i] * (fluid.smoke[i] ? 1.0 : 0.0);
+		minP = Math.min(minP, p);
+		maxP = Math.max(maxP, p);
 		const v = Math.sqrt(fluid.v[i] ** 2 + fluid.u[i] ** 2);
-		if (isNaN(v)) {
-			// continue;
-		}
 		minV = Math.min(minV, v);
 		maxV = Math.max(maxV, v);
 	}
-	console.log({ minP, maxP, minV, maxV });
-	const remap = (x: number, l = minP, h = maxP) => Math.floor(((x - l) / (h - l + 0.001)) * 255);
 
 	const data = ctx.createImageData(width, height);
-	let dataIdx = 0;
 	for (let i = 0; i < X; i++) {
 		for (let j = 0; j < Y; j++) {
 			let color = [255, 255, 255, 255];
@@ -393,13 +344,13 @@ function fluidText(fluid: Fluid) {
 	const start = Math.floor(fluid.numX / 5);
 	let X = start;
 	// F
-	fluid.solidifyRect(X, centerY - 20, 10, 40);
-	fluid.solidifyRect(X + 10, centerY + 10, 12, 10);
-	fluid.solidifyRect(X + 10, centerY - 5, 8, 8);
+	fluid.smokeRect(X, centerY - 20, 10, 40);
+	fluid.smokeRect(X + 10, centerY + 10, 12, 10);
+	fluid.smokeRect(X + 10, centerY - 5, 8, 8);
 	X += 22 + 10;
 	// L
-	fluid.solidifyRect(X, centerY - 20, 10, 40);
-	fluid.solidifyRect(X + 10, centerY - 20, 12, 10);
+	fluid.smokeRect(X, centerY - 20, 10, 40);
+	fluid.smokeRect(X + 10, centerY - 20, 12, 10);
 	X += 22 + 10;
 	// U
 	fluid.solidifyRect(X, centerY - 20, 10, 40);
@@ -407,20 +358,15 @@ function fluidText(fluid: Fluid) {
 	fluid.solidifyRect(X + 20, centerY - 20, 10, 40);
 	X += 30 + 10;
 	// I
-	fluid.solidifyRect(X, centerY - 20, 10, 40);
+	fluid.smokeRect(X, centerY - 20, 10, 40);
 	X += 10 + 10;
 
 	// D
-	fluid.solidifyRect(X, centerY - 20, 10, 40);
-	fluid.solidifyRect(X + 10, centerY - 20, 12, 10);
-	fluid.solidifyRect(X + 10, centerY + 10, 12, 10);
-	fluid.solidifyRect(X + 15, centerY - 18, 10, 36);
+	fluid.smokeRect(X, centerY - 20, 10, 40);
+	fluid.smokeRect(X + 10, centerY - 20, 12, 10);
+	fluid.smokeRect(X + 10, centerY + 10, 12, 10);
+	fluid.smokeRect(X + 15, centerY - 18, 10, 36);
 	X += 15 + 10;
-
-	for (let i = start; i < X; i += 24) {
-		fluid.solidifyRect(i, centerY + 50, 4, 4);
-		fluid.solidifyRect(i, centerY - 54, 4, 4);
-	}
 }
 
 export function simulate(
@@ -439,10 +385,28 @@ export function simulate(
 	ctx.canvas.height = Y * scale;
 	ctx.canvas.style.width = `${X * scale}px`;
 	ctx.canvas.style.height = `${Y * scale}px`;
-	ctx.canvas.addEventListener('mousemove', (e) => {
+	const mousePos = (e: any) => {
 		const rect = ctx.canvas.getBoundingClientRect();
 		const x = Math.floor((e.clientX - rect.x) / scale);
 		const y = Math.floor(Y - (e.clientY - rect.y) / scale);
+		return { x, y };
+	};
+	const mouseFill = (x: number, y: number) => {
+		for (let i = -3; i < 4; i++) {
+			for (let j = -3; j < 4; j++) {
+				const fx = x + i;
+				const fy = y + j;
+				const idx = fx * Y + fy;
+				if (fx < 1 || fy < 1 || fx >= X || fy >= Y) {
+					continue;
+				}
+				fluid.s[idx] = 0.0;
+				fluid.smoke[idx] = 0.0;
+			}
+		}
+	};
+	const mouseHandler = (e: any) => {
+		const { x, y } = mousePos(e);
 		let dx = e.movementX / 6;
 		let dy = e.movementY / 6;
 		const speed = Math.sqrt(dx ** 2 + dy ** 2);
@@ -450,19 +414,28 @@ export function simulate(
 			dx /= speed;
 			dy /= speed;
 		}
-		for (let i = -4; i < 5; i++) {
-			for (let j = -4; j < 5; j++) {
-				const fx = x + i;
-				const fy = y + j;
-				const idx = fx * Y + fy;
-				if (!fluid.s[idx] || fx <= 1 || fy <= 1 || fx >= X - 2 || fy >= Y - 2) {
-					continue;
-				}
+		if (e.buttons) {
+			mouseFill(x, y);
+		} else {
+			for (let i = -4; i < 5; i++) {
+				for (let j = -4; j < 5; j++) {
+					const fx = x + i;
+					const fy = y + j;
+					const idx = fx * Y + fy;
+					if (!fluid.s[idx] || fx <= 1 || fy <= 1 || fx >= X - 2 || fy >= Y - 2) {
+						continue;
+					}
 
-				fluid.v[idx] = -dy;
-				fluid.u[idx] = dx;
+					fluid.v[idx] = -dy;
+					fluid.u[idx] = dx;
+				}
 			}
 		}
+	};
+	ctx.canvas.addEventListener('mousemove', mouseHandler);
+	ctx.canvas.addEventListener('click', (e) => {
+		const { x, y } = mousePos(e);
+		mouseFill(x, y);
 	});
 	for (let i = 0; i < X; i++) {
 		for (let j = 0; j < Y; j++) {
@@ -474,9 +447,9 @@ export function simulate(
 			if (j == 0 || j == Y - 1) {
 				s = 0.0;
 			}
-			if (i > 6 && Math.floor(j / 4 + 1) % 3 == 0 && Math.floor(i / 4) % 3 == 0) {
-				fluid.smoke[idx] = 1.0;
-			}
+			// if (i > 6 && Math.floor(j / 4 + 1) % 3 == 0 && Math.floor(i / 4) % 3 == 0) {
+			// 	fluid.smoke[idx] = 1.0;
+			// }
 			fluid.s[idx] = s;
 		}
 	}
@@ -492,12 +465,6 @@ export function simulate(
 		if (!(frame % 60)) {
 			console.log('Frame', frame);
 		}
-		// const arr = [];
-		// for (let i = 0; i < 4; i++) {
-		// 	const idx = (X - 1) * Y - 4 + i;
-		// 	arr.push(fluid.u[idx]);
-		// }
-		// console.log(arr);
 	};
 
 	const loop = (frames: number) => {

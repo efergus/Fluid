@@ -16,7 +16,7 @@ class Fluid {
 	declare overrelaxation: number;
 
 	constructor(X: number, Y: number, options: FluidOptions = {}) {
-		const { overrelaxation } = options;
+		const { overrelaxation = 1.9 } = options;
 		this.vx = new Field(X, Y, { origin: vec2(-0.5, 0) });
 		this.vy = new Field(X, Y, { origin: vec2(0, -0.5) });
 		this.prevx = new Field(X, Y, { origin: vec2(0.5, 0) });
@@ -24,10 +24,10 @@ class Fluid {
 		this.pressure = new Field(X, Y);
 		this.open = new Field(X, Y);
 		this.smoke = new Field(X, Y);
-		this.overrelaxation = 0.0;
+		this.overrelaxation = overrelaxation;
 	}
 
-	constrain(dt: number) {
+	swap() {
 		const tmpx = this.vx;
 		const tmpy = this.vy;
 
@@ -35,6 +35,10 @@ class Fluid {
 		this.vy = this.prevy;
 		this.prevx = tmpx;
 		this.prevy = tmpy;
+	}
+
+	constrain(dt: number) {
+		this.swap();
 
 		this.vx.interior((i, j) => {
 			const sx0 = this.open.get(i - 1, j);
@@ -62,5 +66,45 @@ class Fluid {
 		});
 	}
 
-	advectVel() {}
+	advectVel(dt: number) {
+		this.swap();
+		this.vx.interior((i, j, x, y) => {
+			// TODO: maybe need an additional check?
+			if (!this.open.get(i, j)) {
+				return;
+			}
+			const dx = this.prevx.get(i, j) * dt;
+			const dy = this.prevy.sample(x, y) * dt;
+			const vx = this.prevx.sample(x - dx, y - dy);
+			this.vx.set(i, j, vx);
+		});
+		this.vy.interior((i, j, x, y) => {
+			// TODO: maybe need an additional check?
+			if (!this.open.get(i, j)) {
+				return;
+			}
+			const dx = this.prevx.sample(x, y) * dt;
+			const dy = this.prevy.get(i, j) * dt;
+			const vy = this.prevy.sample(x - dx, y - dy);
+			this.vy.set(i, j, vy);
+		});
+	}
+
+	step(dt: number) {
+		this.constrain(dt);
+		this.advectVel(dt);
+	}
+}
+
+type DrawContext = {};
+
+function simulate(ctx: CanvasRenderingContext2D, width: number, height: number, scale = 4.0) {
+	const fluid = new Fluid(width, height);
+	const X = width;
+	const Y = height;
+
+	ctx.canvas.width = X * scale;
+	ctx.canvas.height = Y * scale;
+	ctx.canvas.style.width = `${X * scale}px`;
+	ctx.canvas.style.height = `${Y * scale}px`;
 }
